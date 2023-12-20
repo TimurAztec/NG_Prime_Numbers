@@ -29,10 +29,21 @@ def generateChart():
 
         simple_numbers, prime_numbers = generate_numbers(start, end)
 
+        average_simple = sum(simple_numbers) / len(simple_numbers) if simple_numbers else 0
+        average_prime = sum(prime_numbers) / len(prime_numbers) if prime_numbers else 0
+        total_sum = sum(simple_numbers) + sum(prime_numbers)
+
         workbook = Workbook()
         sheet = workbook.active
         sheet['A1'] = 'Simple Numbers'
         sheet['B1'] = 'Prime Numbers'
+
+        sheet['D1'] = 'Average of Simple Numbers'
+        sheet['E1'] = 'Average of Prime Numbers'
+        sheet['F1'] = 'Total Sum'
+        sheet['D2'] = average_simple
+        sheet['E2'] = average_prime
+        sheet['F2'] = total_sum
 
         def write_numbers_to_column(column, value):
             for i, num in enumerate(value, start=2):
@@ -50,6 +61,8 @@ def generateChart():
         
         plt.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors, startangle=90)
         plt.title('Simple and prime number comparison chart')
+        plt.text(0, 0, f'Avg Simple: {round(average_simple)}\nAvg Prime: {round(average_prime)}\nTotal Sum: {round(total_sum)}',
+             horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes, fontsize=6)
 
         chart_image_url: str = f'number_comparison_{start}_{end}.png'
         image_stream = BytesIO()
