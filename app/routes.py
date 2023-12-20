@@ -1,4 +1,5 @@
 from io import BytesIO
+import os
 from matplotlib import image, pyplot as plt
 from openpyxl import Workbook
 from openpyxl.chart import Reference, PieChart
@@ -22,6 +23,9 @@ def generateChart():
     try:
         start = int(request.form['start'])
         end = int(request.form['end'])
+        filename = f'number_comparison_{start}_{end}.xlsx'
+        if os.path.exists(f"static/{filename}"):
+            return render_template('result.html', filename=filename, chart_image_url=f'number_comparison_{start}_{end}.png')
 
         simple_numbers, prime_numbers = generate_numbers(start, end)
 
@@ -47,7 +51,7 @@ def generateChart():
         plt.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors, startangle=90)
         plt.title('Simple and prime number comparison chart')
 
-        chart_image_url: str = f'number_comparison_{len(simple_numbers)}_{len(prime_numbers)}.png'
+        chart_image_url: str = f'number_comparison_{start}_{end}.png'
         image_stream = BytesIO()
         plt.savefig(image_stream, format='png')
         plt.savefig("static/" + chart_image_url)
@@ -57,7 +61,6 @@ def generateChart():
         img.anchor = 'D5'
         sheet.add_image(img)
 
-        filename = f'number_comparison_{start}_{end}.xlsx'
         workbook.save("static/" + filename)
 
         return render_template('result.html', filename=filename, chart_image_url=chart_image_url)
