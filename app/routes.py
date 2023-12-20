@@ -6,8 +6,9 @@ from openpyxl.drawing.image import Image
 from app import app
 from flask import render_template, request, send_file, send_from_directory
 from typing import List
+import concurrent.futures
 
-from app.utils import is_prime
+from app.utils import generate_numbers
 
 @app.route('/', methods=['GET'])
 def index():
@@ -22,19 +23,22 @@ def generateChart():
         start = int(request.form['start'])
         end = int(request.form['end'])
 
-        simple_numbers: List[int] = [num for num in range(start, end+1) if num > 1]
-        prime_numbers: List[int] = [num for num in simple_numbers if is_prime(num)]
+        simple_numbers, prime_numbers = generate_numbers(start, end)
 
         workbook = Workbook()
         sheet = workbook.active
         sheet['A1'] = 'Simple Numbers'
         sheet['B1'] = 'Prime Numbers'
 
-        for i, num in enumerate(simple_numbers, start=2):
-            sheet[f'A{i}'] = num
+        def write_numbers_to_column(column, value):
+            for i, num in enumerate(value, start=2):
+                sheet[f'{column}{i}'] = num
 
-        for i, num in enumerate(prime_numbers, start=2):
-            sheet[f'B{i}'] = num
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(write_numbers_to_column("A", simple_numbers), range(start, end + 1))
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(write_numbers_to_column("B", prime_numbers), range(start, end + 1))
 
         labels = ['Simple Numbers', 'Prime Numbers']
         sizes = [len(simple_numbers), len(prime_numbers)]
