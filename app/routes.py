@@ -1,5 +1,6 @@
 from io import BytesIO
 import os
+import threading
 from matplotlib import image, pyplot as plt
 from openpyxl import Workbook
 from openpyxl.chart import Reference, PieChart
@@ -9,7 +10,7 @@ from flask import render_template, request, send_file, send_from_directory
 from typing import List
 import concurrent.futures
 
-from app.utils import generate_numbers
+from app.utils import generate_numbers, generate_fibonacci_numbers
 
 @app.route('/', methods=['GET'])
 def index():
@@ -28,6 +29,7 @@ def generateChart():
             return render_template('result.html', filename=filename, chart_image_url=f'number_comparison_{start}_{end}.png')
 
         simple_numbers, prime_numbers = generate_numbers(start, end)
+        fibonacci_numbers = generate_fibonacci_numbers(start, end)
 
         average_simple = sum(simple_numbers) / len(simple_numbers) if simple_numbers else 0
         average_prime = sum(prime_numbers) / len(prime_numbers) if prime_numbers else 0
@@ -37,6 +39,7 @@ def generateChart():
         sheet = workbook.active
         sheet['A1'] = 'Simple Numbers'
         sheet['B1'] = 'Prime Numbers'
+        sheet['C1'] = 'Fibonacci Numbers'
 
         sheet['D1'] = 'Average of Simple Numbers'
         sheet['E1'] = 'Average of Prime Numbers'
@@ -45,15 +48,24 @@ def generateChart():
         sheet['E2'] = average_prime
         sheet['F2'] = total_sum
 
+        sheet_lock = threading.Lock()
+
         def write_numbers_to_column(column, value):
-            for i, num in enumerate(value, start=2):
-                sheet[f'{column}{i}'] = num
+            with sheet_lock:
+                for i, num in enumerate(value, start=2):
+                    sheet[f'{column}{i}'] = num
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.map(write_numbers_to_column("A", simple_numbers), range(start, end + 1))
+        thread_a = threading.Thread(target=write_numbers_to_column, args=("A", simple_numbers))
+        thread_b = threading.Thread(target=write_numbers_to_column, args=("B", prime_numbers))
+        thread_c = threading.Thread(target=write_numbers_to_column, args=("C", fibonacci_numbers))
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.map(write_numbers_to_column("B", prime_numbers), range(start, end + 1))
+        thread_a.start()
+        thread_b.start()
+        thread_c.start()
+
+        thread_a.join()
+        thread_b.join()
+        thread_c.join()
 
         labels = ['Simple Numbers', 'Prime Numbers']
         sizes = [len(simple_numbers), len(prime_numbers)]
